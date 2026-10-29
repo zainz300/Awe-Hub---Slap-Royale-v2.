@@ -653,7 +653,7 @@ Game:Button({
 })
 
 -- ==========================================================
--- UPDATED WALKSPEED LOGIC (VELOCITY-BASED CHASSIS 1-40)
+-- WALKSPEED LOGIC (VELOCITY-BASED CHASSIS 1-40)
 -- ==========================================================
 RunService.RenderStepped:Connect(function(dt)
 	if not ConfigData.WalkSpeed then return end
@@ -1397,7 +1397,7 @@ Immunites:Toggle({
 					local hpPercent = (hum.Health / hum.MaxHealth) * 100
 					if hpPercent < 60 then
 						for _, item in ipairs(backpack:GetChildren()) do
-							if item:IsA("Tool") and (item.Name == "Apple" or item.Name == "Bandage" or item.Name == "First Aid Kit" or item.Name == "Healing Potion") then
+							if item:IsA("Tool") and (item.Name == "Apple" or item.Name == "Bandage" or item.Name == "First Aid Kit" or item.Name == "Healing Potion" or item.Name == "Witch Brew") then
 								item.Parent = char
 								pcall(function() item:Activate() end)
 								task.wait(0.5)
@@ -1682,12 +1682,12 @@ ESP:Divider()
 local itemValues = {
 	"Apple", "Bandage", "Bomb", "Bull's Essence", "Frog Potion", "Boba", "Speed Potion",
 	"True Power", "Tomahawk", "Force Field Crystal", "Sphere of Fury", "Medkit",
-	"Lightning Potion", "Healing Potion", "Strength Potion", "Cube of Ice"
+	"Lightning Potion", "Healing Potion", "Strength Potion", "Cube of Ice", "Witch Brew"
 }
 
 Game:Dropdown({
 	Title = "Auto Collect Item Selection",
-	Desc = "Choose which item to automatically collect",
+	Desc = "Choose which item to automatically collect (⚠️ Witch Brew only available during Halloween 🎃)",
 	Values = itemValues,
 	Value = ConfigData.SelectedAutoCollectItem,
 	Callback = function(Selected)
@@ -1780,6 +1780,7 @@ local itemColors = {
 	["Frog Potion"] = Color3.fromRGB(30, 144, 255),
 	["Boba"] = Color3.fromRGB(255, 255, 150),
 	["Speed Potion"] = Color3.fromRGB(255, 255, 0),
+	["Witch Brew"] = Color3.fromRGB(148, 0, 211),
 }
 
 RunService.RenderStepped:Connect(function()
@@ -1954,7 +1955,7 @@ task.spawn(function()
 			if hrp and itemRemote then
 				for _, obj in ipairs(workspace:GetDescendants()) do
 					if not ConfigData.GetItemsForAutoBombBus then break end
-					if obj:IsA("Tool") and (obj.Name == "Bomb" or obj.Name == "Apple" or obj.Name == "Bandage" or obj.Name == "Potion of Strength") then
+					if obj:IsA("Tool") and (obj.Name == "Bomb" or obj.Name == "Apple" or obj.Name == "Bandage" or obj.Name == "Potion of Strength" or obj.Name == "Witch Brew") then
 						local targetPart = obj:FindFirstChild("Handle") or (obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")))
 						if targetPart and targetPart:IsA("BasePart") then
 							hrp.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0)
