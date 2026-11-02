@@ -627,7 +627,7 @@ Game:Button({
 
 Game:Button({
 	Title = "TP to Barn",
-	Desc = "Teleports to the barn area",
+	Desc = "Teleports to the barn area (Chain puzzle location)",
 	Locked = false,
 	Callback = function()
 		pcall(function()
@@ -1554,7 +1554,7 @@ MobilityTab:Toggle({
 })
 
 -- ==========================================================
--- INSTANT CHAIN INTEGRATION FROM NEXER SCRIPT
+-- INSTANT CHAIN INTEGRATION (FIXED & ROBUST)
 -- ==========================================================
 ObtainmentTab:Button({
 	Title = "Instant Chain",
@@ -1565,10 +1565,22 @@ ObtainmentTab:Button({
 		pcall(function()
 			local codeList = {}
 			pcall(function()
-				if workspace.Map.CodeBrick.SurfaceGui:FindFirstChild('IMGTemplate') then
-					for _, v in pairs(workspace.Map.CodeBrick.SurfaceGui:GetChildren()) do
+				local map = workspace:FindFirstChild("Map")
+				local codeBrick = map and map:FindFirstChild("CodeBrick")
+				local surfaceGui = codeBrick and codeBrick:FindFirstChild("SurfaceGui")
+				if surfaceGui then
+					for _, v in pairs(surfaceGui:GetChildren()) do
 						if v.Name == 'IMGTemplate' then
-							if v.Image:find('9648769161') then
+							local assetId = tostring(v.Image):match("rbxassetid://(%d+)") or tostring(v.Image):match("(%d+)$")
+							local codes = {
+								["9648755440"] = "8", ["9648765536"] = "2", ["9648723237"] = "3", ["9648718450"] = "6",
+								["9648769161"] = "4", ["9648730082"] = "6", ["9648734698"] = "2", ["9648712563"] = "2",
+								["9648742013"] = "7", ["9648745618"] = "3", ["9648715920"] = "6", ["9648752438"] = "2",
+								["9648749145"] = "8", ["9648759883"] = "9", ["9648738553"] = "8"
+							}
+							if assetId and codes[assetId] then
+								table.insert(codeList, codes[assetId])
+							elseif v.Image:find('9648769161') then
 								table.insert(codeList, '4')
 							end
 						end
@@ -1578,24 +1590,27 @@ ObtainmentTab:Button({
 
 			WindUI:Notify({Title = "Getting Chain...", Content = "Please wait...", Duration = 2, Icon = "triangle-exclamation"})
 			
-			for _, v3 in pairs(workspace.Map.OriginOffice:GetChildren()) do
-				if v3.Name:lower():find('codedoor') and v3:FindFirstChild('Door') then
-					local keypad = v3.Door:FindFirstChild('Keypad')
-					if keypad and keypad:FindFirstChild('Buttons') then
-						local buttons = keypad.Buttons
-						if buttons:FindFirstChild("Reset") and buttons.Reset:FindFirstChild("ClickDetector") then
-							fireclickdetector(buttons.Reset.ClickDetector)
-							task.wait(0.333)
-						end
-						for _, digit in ipairs(codeList) do
-							if buttons:FindFirstChild(digit) and buttons[digit]:FindFirstChild("ClickDetector") then
-								fireclickdetector(buttons[digit].ClickDetector)
+			local originOffice = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("OriginOffice")
+			if originOffice then
+				for _, v3 in pairs(originOffice:GetChildren()) do
+					if v3.Name:lower():find('codedoor') and v3:FindFirstChild('Door') then
+						local keypad = v3.Door:FindFirstChild('Keypad')
+						if keypad and keypad:FindFirstChild('Buttons') then
+							local buttons = keypad.Buttons
+							if buttons:FindFirstChild("Reset") and buttons.Reset:FindFirstChild("ClickDetector") then
+								fireclickdetector(buttons.Reset.ClickDetector)
 								task.wait(0.333)
 							end
-						end
-						if buttons:FindFirstChild("Enter") and buttons.Enter:FindFirstChild("ClickDetector") then
-							task.wait(0.333)
-							fireclickdetector(buttons.Enter.ClickDetector)
+							for _, digit in ipairs(codeList) do
+								if buttons:FindFirstChild(digit) and buttons[digit]:FindFirstChild("ClickDetector") then
+									fireclickdetector(buttons[digit].ClickDetector)
+									task.wait(0.333)
+								end
+							end
+							if buttons:FindFirstChild("Enter") and buttons.Enter:FindFirstChild("ClickDetector") then
+								task.wait(0.333)
+								fireclickdetector(buttons.Enter.ClickDetector)
+							end
 						end
 					end
 				end
