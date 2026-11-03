@@ -959,16 +959,6 @@ local TargetDropdown = CombatTab:Dropdown({
 	end
 })
 
-local TPPlayerDropdown = CombatTab:Dropdown({
-	Title = "Select Player to TP",
-	Desc = "Choose a player to teleport to safely",
-	Values = GetPlayerNames(),
-	Value = "",
-	Callback = function(Selected)
-		SelectedTPPlayerName = Selected
-	end
-})
-
 CombatTab:Button({
 	Title = "Refresh Target List",
 	Desc = "Removes players who left and updates the list",
@@ -981,12 +971,10 @@ CombatTab:Button({
 		if SelectedTPPlayerName and not table.find(names, SelectedTPPlayerName) then
 			SelectedTPPlayerName = nil
 		end
-		pcall(function()
-			TargetDropdown:SetValues(names)
-		end)
-		pcall(function()
+		TargetDropdown:SetValues(names)
+		if TPPlayerDropdown then
 			TPPlayerDropdown:SetValues(names)
-		end)
+		end
 		Notification("Target List", "Target lists refreshed successfully! Active player count: " .. tostring(#names), 3, "bird")
 	end
 })
@@ -1006,7 +994,12 @@ CombatTab:Toggle({
 				while ConfigData.KillPlayer do
 					local targetP = TargetPlayerName and Players:FindFirstChild(TargetPlayerName)
 					if targetP and targetP.Character and targetP.Character:FindFirstChild("HumanoidRootPart") then
-						PumpkinSafeTP(targetP.Character.HumanoidRootPart)
+						local targetHrp = targetP.Character.HumanoidRootPart
+						local char = player.Character
+						local hrp = char and char:FindFirstChild("HumanoidRootPart")
+						if hrp then
+							hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 4)
+						end
 						task.wait(0.5)
 					else
 						task.wait(1)
@@ -1019,6 +1012,16 @@ CombatTab:Toggle({
 })
 
 CombatTab:Divider()
+
+local TPPlayerDropdown = CombatTab:Dropdown({
+	Title = "Select Player to TP",
+	Desc = "Choose a player to teleport to safely",
+	Values = GetPlayerNames(),
+	Value = "",
+	Callback = function(Selected)
+		SelectedTPPlayerName = Selected
+	end
+})
 
 CombatTab:Button({
 	Title = "Teleport to Selected Player",
@@ -1033,10 +1036,11 @@ CombatTab:Button({
 			local targetP = Players:FindFirstChild(SelectedTPPlayerName)
 			if targetP and targetP.Character and targetP.Character:FindFirstChild("HumanoidRootPart") then
 				local targetHrp = targetP.Character.HumanoidRootPart
-				local myChar = player.Character
-				local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
-				if myHrp then
-					myHrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 4)
+				local char = player.Character
+				local hrp = char and char:FindFirstChild("HumanoidRootPart")
+				if hrp then
+					-- Teleport 4 studs behind using the target's look vector
+					hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 4)
 					Notification("Teleport", "Teleported behind " .. targetP.Name, 3, "bird")
 				end
 			else
