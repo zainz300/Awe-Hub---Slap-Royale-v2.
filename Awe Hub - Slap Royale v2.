@@ -162,7 +162,7 @@ local Combat = {
 	SlapAuraEnabled = ConfigData.SlapAura,
 	SlapAuraThread = nil,
 	SlapAuraRange = 20,
-	SlapAuraInterval = 0.45,
+	SlapAuraInterval = 2, -- Updated to 2 seconds cooldown
 	SlapAuraFastInterval = 0.1,
 	SlapAuraDefaultInterval = 2.2,
 	SlapRemote = nil,
@@ -1020,7 +1020,7 @@ local TPPlayerDropdown = CombatTab:Dropdown({
 
 CombatTab:Button({
 	Title = "Teleport to Selected Player",
-	Desc = "Instantly teleports you safely near the chosen player",
+	Desc = "Instantly teleports you 4 studs behind the chosen player",
 	Locked = false,
 	Callback = function()
 		pcall(function()
@@ -1030,8 +1030,13 @@ CombatTab:Button({
 			end
 			local targetP = Players:FindFirstChild(SelectedTPPlayerName)
 			if targetP and targetP.Character and targetP.Character:FindFirstChild("HumanoidRootPart") then
-				PumpkinSafeTP(targetP.Character.HumanoidRootPart)
-				Notification("Teleport", "Teleported to " .. targetP.Name, 3, "bird")
+				local targetHrp = targetP.Character.HumanoidRootPart
+				local myChar = player.Character
+				local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+				if myHrp then
+					myHrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 4)
+					Notification("Teleport", "Teleported behind " .. targetP.Name, 3, "bird")
+				end
 			else
 				Notification("Teleport", "Target player is invalid or dead.", 3, "bird")
 			end
@@ -1828,7 +1833,13 @@ RunService.RenderStepped:Connect(function()
 					end
 					local label = billboard:FindFirstChild("ESPLabel")
 					if label then
-						label.Text = e.Character.Name .. "\n" .. GetPlayerInfo(e)
+						-- Fixed name concatenation so player name always shows clearly
+						local infoText = GetPlayerInfo(e)
+						if infoText ~= "" then
+							label.Text = e.Name .. "\n" .. infoText
+						else
+							label.Text = e.Name
+						end
 					end
 				else
 					if playerEspTable[e] then playerEspTable[e]:Destroy(); playerEspTable[e] = nil end
