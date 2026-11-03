@@ -18,6 +18,7 @@ _G.Glove = false
 _G.Kills = false
 _G.Power = false
 _G.Speed = false
+_G.SpeedValue = 0
 _G.JumpPower = false
 _G.Health = false
 _G.SlapAura = false
@@ -45,7 +46,7 @@ local ConfigFileName = "AWEHub_SlapRoyale_Config.json"
 local ConfigData = {
 	StaffDetection = false,
 	WalkSpeed = false,
-	SpeedValue = 40,
+	SpeedValue = 4,
 	SpeedBoost = false,
 	SpeedBoostBypass = false,
 	SpeedDistance = 10,
@@ -120,6 +121,7 @@ local function LoadConfig()
 end
 
 LoadConfig()
+_G.SpeedValue = ConfigData.SpeedValue
 
 -- RayParams for Safe TP Logic
 local RayParams = RaycastParams.new()
@@ -451,6 +453,7 @@ ConfigTab:Button({
 	Desc = "Reloads configuration from file",
 	Callback = function()
 		LoadConfig()
+		_G.SpeedValue = ConfigData.SpeedValue
 		Notification("Config", "Configuration reloaded.", 4, "bird")
 	end
 })
@@ -653,42 +656,85 @@ Game:Button({
 })
 
 -- ==========================================================
--- WALKSPEED LOGIC (VELOCITY-BASED CHASSIS 1-40)
+-- NEW WALKSPEED LOGIC (HEARTBEAT VELOCITY SCALING)
 -- ==========================================================
-RunService.RenderStepped:Connect(function(dt)
-	if not ConfigData.WalkSpeed then return end
-	if not character or not humanoidrootpart or not humanoid then return end
-	
-	local moveDir = humanoid.MoveDirection
-	if moveDir.Magnitude > 0 then
-		local currentVel = humanoidrootpart.AssemblyLinearVelocity
-		local targetVelocity = Vector3.new(moveDir.X * (tonumber(ConfigData.SpeedValue) or 40), currentVel.Y, moveDir.Z * (tonumber(ConfigData.SpeedValue) or 40))
-		humanoidrootpart.AssemblyLinearVelocity = targetVelocity
-	end
-end)
+local speedConnection = nil
 
 PlayerMods:Toggle({
-	Title = "WalkSpeed",
+	Title = "Movement Speed",
 	Desc = "Increases your speed using velocity logic",
 	Icon = "bird",
 	Type = "Checkbox",
 	Value = ConfigData.WalkSpeed,
 	Callback = function(Value)
 		ConfigData.WalkSpeed = Value
+		_G.Speed = Value
 		SaveConfig()
+		if speedConnection then
+			speedConnection:Disconnect()
+			speedConnection = nil
+		end
+		if Value then
+			speedConnection = RunService.Heartbeat:Connect(function()
+				local character = player.Character
+				local hrp = character and character:FindFirstChild("HumanoidRootPart")
+				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+				if not character or character:GetAttribute("Ragdolled") or not hrp or not humanoid then return end
+				local move = humanoid.MoveDirection
+				if move.Magnitude <= 0 then return end
+				local velocity = hrp.AssemblyLinearVelocity
+				local horizontal = Vector3.new(velocity.X, 0, velocity.Z)
+				local speed = humanoid.WalkSpeed + (tonumber(_G.SpeedValue) or 0)
+				if horizontal.Magnitude > speed then
+					horizontal = horizontal.Unit * speed
+					hrp.AssemblyLinearVelocity = Vector3.new(horizontal.X, velocity.Y, horizontal.Z)
+				else
+					local direction = Vector3.new(move.X, 0, move.Z).Unit
+					hrp.AssemblyLinearVelocity = Vector3.new(direction.X * speed, velocity.Y, direction.Z * speed)
+				end
+			end)
+		end
 	end
 })
 
 PlayerMods:Slider({
-	Title = "WalkSpeed Value",
-	Desc = "Adjust speed from 1 to 40",
+	Title = "Speed",
+	Desc = "Adjust speed value from 1 to 12",
 	Step = 1,
-	Value = { Min = 1, Max = 40, Default = ConfigData.SpeedValue },
+	Value = { Min = 1, Max = 12, Default = ConfigData.SpeedValue },
 	Callback = function(Value)
-		ConfigData.SpeedValue = tonumber(Value) or 40
+		ConfigData.SpeedValue = tonumber(Value) or 0
+		_G.SpeedValue = tonumber(Value) or 0
 		SaveConfig()
 	end
 })
+
+-- Auto-enable if saved in config
+if ConfigData.WalkSpeed then
+	task.spawn(function()
+		task.wait(1)
+		if ConfigData.WalkSpeed and not speedConnection then
+			speedConnection = RunService.Heartbeat:Connect(function()
+				local character = player.Character
+				local hrp = character and character:FindFirstChild("HumanoidRootPart")
+				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+				if not character or character:GetAttribute("Ragdolled") or not hrp or not humanoid then return end
+				local move = humanoid.MoveDirection
+				if move.Magnitude <= 0 then return end
+				local velocity = hrp.AssemblyLinearVelocity
+				local horizontal = Vector3.new(velocity.X, 0, velocity.Z)
+				local speed = humanoid.WalkSpeed + (tonumber(_G.SpeedValue) or 0)
+				if horizontal.Magnitude > speed then
+					horizontal = horizontal.Unit * speed
+					hrp.AssemblyLinearVelocity = Vector3.new(horizontal.X, velocity.Y, horizontal.Z)
+				else
+					local direction = Vector3.new(move.X, 0, move.Z).Unit
+					hrp.AssemblyLinearVelocity = Vector3.new(direction.X * speed, velocity.Y, direction.Z * speed)
+				end
+			end)
+		end
+	end)
+end
 
 PlayerMods:Divider()
 
@@ -1039,7 +1085,6 @@ CombatTab:Button({
 				local char = player.Character
 				local hrp = char and char:FindFirstChild("HumanoidRootPart")
 				if hrp then
-					-- Teleport 4 studs behind using the target's look vector
 					hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 4)
 					Notification("Teleport", "Teleported behind " .. targetP.Name, 3, "bird")
 				end
