@@ -22,6 +22,7 @@ _G.SpeedValue = 0
 _G.JumpPower = false
 _G.Health = false
 _G.SlapAura = false
+_G.AutoSlap = false
 _G.AutoWin = false
 _G.AntiAcid = false
 _G.AntiLava = false
@@ -59,6 +60,7 @@ local ConfigData = {
 	HitboxSize = 5,
 	SlapAura = false,
 	FastSlapAura = false,
+	AutoSlap = false,
 	TomahawkAura = false,
 	TomahawkRange = 20,
 	TomahawkAimbot = false,
@@ -128,36 +130,6 @@ local RayParams = RaycastParams.new()
 RayParams.FilterDescendantsInstances = {character}
 RayParams.FilterType = Enum.RaycastFilterType.Exclude
 
-local function PumpkinSafeTP(targetPart)
-	local char = player.Character
-	local hrp = char and char:FindFirstChild("HumanoidRootPart")
-	if not hrp or not targetPart then return end
-	local targetPos = targetPart.Position
-	
-	local sideDirs = {
-		Vector3.new(3, 0, 0),
-		Vector3.new(-3, 0, 0),
-		Vector3.new(0, 0, 3),
-		Vector3.new(0, 0, -3)
-	}
-	
-	local chosenSide = nil
-	for _, dir in ipairs(sideDirs) do
-		local ray = workspace:Raycast(targetPos, dir, RayParams)
-		if not ray then
-			chosenSide = dir
-			break
-		end
-	end
-	
-	if chosenSide then
-		hrp.CFrame = CFrame.new(targetPos + chosenSide, targetPos)
-	else
-		local rightVector = Camera and Camera.CFrame.RightVector or Vector3.new(1, 0, 0)
-		hrp.CFrame = CFrame.new(targetPos + rightVector * 4, targetPos)
-	end
-end
-
 -- Check if player currently has a glove equipped
 local function IsHoldingGlove()
 	local char = player.Character
@@ -166,22 +138,21 @@ local function IsHoldingGlove()
 	if tool and (tool.Name:lower():find("glove") or tool:FindFirstChild("Glove") or tool:GetAttribute("IsGlove")) then
 		return true
 	end
-	-- Fallback for standard Slap Royale glove holding detection
 	if tool and tool.Name ~= "Apple" and tool.Name ~= "Bandage" and tool.Name ~= "Bomb" and tool.Name ~= "Tomahawk" then
 		return true
 	end
 	return false
 end
 
---[[ Functions ]]
+--[[ Combat / Slap Aura Setup ]]
 local Combat = {
 	HitboxSize = 10,
 	SlapAuraEnabled = ConfigData.SlapAura,
 	SlapAuraThread = nil,
-	SlapAuraRange = 20,
-	SlapAuraInterval = 2.2, -- Set to 2.2 as requested
-	SlapAuraFastInterval = 0.1,
-	SlapAuraDefaultInterval = 2.2,
+	AutoSlapEnabled = ConfigData.AutoSlap,
+	AutoSlapThread = nil,
+	SlapAuraRange = 14, -- Updated to match source slap aura range
+	SlapAuraInterval = 0.05,
 	SlapRemote = nil,
 }
 
@@ -200,33 +171,45 @@ function Combat.GetSlapRemote()
 	return nil
 end
 
+local function GetValidSlapTarget(p1)
+	return p1:FindFirstChild("Right Arm") or p1:FindFirstChild("RightHand")
+		or p1:FindFirstChild("HumanoidRootPart") or p1:FindFirstChild("Torso")
+		or p1:FindFirstChild("UpperTorso")
+end
+
+local slapCooldowns = {}
+
 function Combat.StartSlapAura()
 	if Combat.SlapAuraThread then
 		return
 	end
 	Combat.SlapAuraThread = task.spawn(function()
+		local slap = Combat.GetSlapRemote()
 		while Combat.SlapAuraEnabled do
-			local remote = Combat.GetSlapRemote()
-			local localCharacter = player.Character
-			local localRoot = localCharacter and localCharacter:FindFirstChild("HumanoidRootPart")
-			-- Only proceed if holding a glove
-			if remote and localRoot and IsHoldingGlove() then
-				for _, targetPlayer in ipairs(Players:GetPlayers()) do
-					if targetPlayer ~= player then
-						local targetCharacter = targetPlayer.Character
-						local targetRoot = targetCharacter and targetCharacter:FindFirstChild("HumanoidRootPart")
-						local hum = targetCharacter and targetCharacter:FindFirstChildOfClass("Humanoid")
-						if targetRoot and hum and hum.Health > 0 then
-							if (localRoot.Position - targetRoot.Position).Magnitude <= Combat.SlapAuraRange then
+			slap = Combat.GetSlapRemote()
+			local character3 = player.Character
+			if slap and character3 and character3:FindFirstChild("HumanoidRootPart") then
+				local position3 = character3.HumanoidRootPart.Position
+				local currentTime = tick()
+
+				for _, value4 in ipairs(Players:GetPlayers()) do
+					if value4 ~= player and value4.Character then
+						local humanoidRootPart2 = value4.Character:FindFirstChild("HumanoidRootPart")
+						local v17 = GetValidSlapTarget(value4.Character)
+
+						if humanoidRootPart2 and v17
+							and (humanoidRootPart2.Position - position3).Magnitude <= Combat.SlapAuraRange then
+							if not slapCooldowns[value4] or currentTime - slapCooldowns[value4] >= 0.25 then
+								slapCooldowns[value4] = currentTime
 								pcall(function()
-									remote:FireServer(targetRoot)
+									slap:FireServer(v17)
 								end)
 							end
 						end
 					end
 				end
 			end
-			local interval = ConfigData.FastSlapAura and 0.1 or Combat.SlapAuraInterval
+			local interval = ConfigData.FastSlapAura and 0.02 or 0.05
 			task.wait(interval)
 		end
 		Combat.SlapAuraThread = nil
@@ -239,6 +222,47 @@ function Combat.SetSlapAura(state)
 	SaveConfig()
 	if Combat.SlapAuraEnabled then
 		Combat.StartSlapAura()
+	end
+end
+
+function Combat.StartAutoSlap()
+	if Combat.AutoSlapThread then
+		return
+	end
+	Combat.AutoSlapThread = task.spawn(function()
+		local slap = Combat.GetSlapRemote()
+		while Combat.AutoSlapEnabled do
+			slap = Combat.GetSlapRemote()
+			local character3 = player.Character
+			if slap and character3 and character3:FindFirstChild("HumanoidRootPart") then
+				local position3 = character3.HumanoidRootPart.Position
+				for _, value4 in ipairs(Players:GetPlayers()) do
+					if value4 ~= player and value4.Character then
+						local humanoidRootPart2 = value4.Character:FindFirstChild("HumanoidRootPart")
+						local v17 = GetValidSlapTarget(value4.Character)
+
+						if humanoidRootPart2 and v17
+							and (humanoidRootPart2.Position - position3).Magnitude <= Combat.SlapAuraRange then
+							pcall(function()
+								slap:FireServer(v17)
+							end)
+						end
+					end
+				end
+			end
+			task.wait(0.05)
+		end
+		Combat.AutoSlapThread = nil
+	end)
+end
+
+function Combat.SetAutoSlap(state)
+	Combat.AutoSlapEnabled = state == true
+	ConfigData.AutoSlap = state == true
+	_G.AutoSlap = state == true
+	SaveConfig()
+	if Combat.AutoSlapEnabled then
+		Combat.StartAutoSlap()
 	end
 end
 
@@ -671,9 +695,7 @@ Game:Button({
 	end
 })
 
--- ==========================================================
--- NEW WALKSPEED LOGIC (HEARTBEAT VELOCITY SCALING)
--- ==========================================================
+-- Walkspeed Logic
 local speedConnection = nil
 
 PlayerMods:Toggle({
@@ -725,7 +747,6 @@ PlayerMods:Slider({
 	end
 })
 
--- Auto-enable if saved in config
 if ConfigData.WalkSpeed then
 	task.spawn(function()
 		task.wait(1)
@@ -995,9 +1016,6 @@ PlayerMods:Toggle({
 	end
 })
 
--- ==========================================================
--- TELEPORT & KILL TARGET SELECTION WITH AUTO-CLEANUP
--- ==========================================================
 local TargetPlayerName = nil
 local SelectedTPPlayerName = nil
 local KillPlayerRunning = false
@@ -1184,6 +1202,17 @@ CombatTab:Toggle({
 	Callback = function(Value)
 		ConfigData.FastSlapAura = Value
 		SaveConfig()
+	end
+})
+
+CombatTab:Toggle({
+	Title = "Auto Slap",
+	Desc = "Automatically slaps players in range (Independent toggle)",
+	Icon = "bird",
+	Type = "Checkbox",
+	Value = ConfigData.AutoSlap,
+	Callback = function(Value)
+		Combat.SetAutoSlap(Value)
 	end
 })
 
@@ -1484,9 +1513,6 @@ Immunites:Toggle({
 	end
 })
 
--- ==========================================================
--- FLY INTEGRATION WITH UP/DOWN (E/Q & UI BUTTONS)
--- ==========================================================
 local FlyVectorForce = Instance.new("VectorForce")
 FlyVectorForce.Attachment0 = humanoidrootpart:WaitForChild("RootAttachment")
 FlyVectorForce.ApplyAtCenterOfMass = true
@@ -1625,9 +1651,6 @@ MobilityTab:Toggle({
 	end
 })
 
--- ==========================================================
--- INSTANT CHAIN INTEGRATION (FIXED & ROBUST)
--- ==========================================================
 ObtainmentTab:Button({
 	Title = "Instant Chain",
 	Desc = "Automatically solves the puzzle to get Chain glove",
@@ -1783,7 +1806,6 @@ Game:Dropdown({
 	end
 })
 
--- Separate Auto Collect Items toggle button
 Game:Toggle({
 	Title = "Auto Collect Items",
 	Desc = "Automatically collects items around the map based on selection",
@@ -1797,7 +1819,6 @@ Game:Toggle({
 	end
 })
 
--- Renamed to Get items for auto bomb bus button
 Game:Toggle({
 	Title = "Get items for auto bomb bus",
 	Desc = "Gets items specifically required for auto bomb bus",
