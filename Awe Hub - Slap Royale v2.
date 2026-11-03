@@ -158,6 +158,21 @@ local function PumpkinSafeTP(targetPart)
 	end
 end
 
+-- Check if player currently has a glove equipped
+local function IsHoldingGlove()
+	local char = player.Character
+	if not char then return false end
+	local tool = char:FindFirstChildOfClass("Tool")
+	if tool and (tool.Name:lower():find("glove") or tool:FindFirstChild("Glove") or tool:GetAttribute("IsGlove")) then
+		return true
+	end
+	-- Fallback for standard Slap Royale glove holding detection
+	if tool and tool.Name ~= "Apple" and tool.Name ~= "Bandage" and tool.Name ~= "Bomb" and tool.Name ~= "Tomahawk" then
+		return true
+	end
+	return false
+end
+
 --[[ Functions ]]
 local Combat = {
 	HitboxSize = 10,
@@ -194,7 +209,8 @@ function Combat.StartSlapAura()
 			local remote = Combat.GetSlapRemote()
 			local localCharacter = player.Character
 			local localRoot = localCharacter and localCharacter:FindFirstChild("HumanoidRootPart")
-			if remote and localRoot then
+			-- Only proceed if holding a glove
+			if remote and localRoot and IsHoldingGlove() then
 				for _, targetPlayer in ipairs(Players:GetPlayers()) do
 					if targetPlayer ~= player then
 						local targetCharacter = targetPlayer.Character
@@ -1150,7 +1166,7 @@ CombatTab:Divider()
 
 CombatTab:Toggle({
 	Title = "Slap Aura",
-	Desc = "Automatically slaps players within range",
+	Desc = "Automatically slaps players within range (Only works when holding a glove)",
 	Icon = "bird",
 	Type = "Checkbox",
 	Value = ConfigData.SlapAura,
