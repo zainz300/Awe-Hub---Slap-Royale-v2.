@@ -179,9 +179,9 @@ local Combat = {
 	SlapAuraEnabled = ConfigData.SlapAura,
 	SlapAuraThread = nil,
 	SlapAuraRange = 20,
-	SlapAuraInterval = 0.45,
+	SlapAuraInterval = 1.9,
 	SlapAuraFastInterval = 0.1,
-	SlapAuraDefaultInterval = 2.2,
+	SlapAuraDefaultInterval = 1.9,
 	SlapRemote = nil,
 }
 
