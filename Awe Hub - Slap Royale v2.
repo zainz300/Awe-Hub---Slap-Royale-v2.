@@ -162,7 +162,7 @@ local Combat = {
 	SlapAuraEnabled = ConfigData.SlapAura,
 	SlapAuraThread = nil,
 	SlapAuraRange = 20,
-	SlapAuraInterval = 2, -- Updated to 2 seconds cooldown
+	SlapAuraInterval = 0.45,
 	SlapAuraFastInterval = 0.1,
 	SlapAuraDefaultInterval = 2.2,
 	SlapRemote = nil,
@@ -959,6 +959,16 @@ local TargetDropdown = CombatTab:Dropdown({
 	end
 })
 
+local TPPlayerDropdown = CombatTab:Dropdown({
+	Title = "Select Player to TP",
+	Desc = "Choose a player to teleport to safely",
+	Values = GetPlayerNames(),
+	Value = "",
+	Callback = function(Selected)
+		SelectedTPPlayerName = Selected
+	end
+})
+
 CombatTab:Button({
 	Title = "Refresh Target List",
 	Desc = "Removes players who left and updates the list",
@@ -971,10 +981,12 @@ CombatTab:Button({
 		if SelectedTPPlayerName and not table.find(names, SelectedTPPlayerName) then
 			SelectedTPPlayerName = nil
 		end
-		TargetDropdown:SetValues(names)
-		if TPPlayerDropdown then
+		pcall(function()
+			TargetDropdown:SetValues(names)
+		end)
+		pcall(function()
 			TPPlayerDropdown:SetValues(names)
-		end
+		end)
 		Notification("Target List", "Target lists refreshed successfully! Active player count: " .. tostring(#names), 3, "bird")
 	end
 })
@@ -1007,16 +1019,6 @@ CombatTab:Toggle({
 })
 
 CombatTab:Divider()
-
-local TPPlayerDropdown = CombatTab:Dropdown({
-	Title = "Select Player to TP",
-	Desc = "Choose a player to teleport to safely",
-	Values = GetPlayerNames(),
-	Value = "",
-	Callback = function(Selected)
-		SelectedTPPlayerName = Selected
-	end
-})
 
 CombatTab:Button({
 	Title = "Teleport to Selected Player",
@@ -1833,13 +1835,7 @@ RunService.RenderStepped:Connect(function()
 					end
 					local label = billboard:FindFirstChild("ESPLabel")
 					if label then
-						-- Fixed name concatenation so player name always shows clearly
-						local infoText = GetPlayerInfo(e)
-						if infoText ~= "" then
-							label.Text = e.Name .. "\n" .. infoText
-						else
-							label.Text = e.Name
-						end
+						label.Text = e.Character.Name .. "\n" .. GetPlayerInfo(e)
 					end
 				else
 					if playerEspTable[e] then playerEspTable[e]:Destroy(); playerEspTable[e] = nil end
