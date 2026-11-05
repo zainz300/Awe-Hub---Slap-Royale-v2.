@@ -11,7 +11,6 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
 local Camera = workspace.CurrentCamera
-
 local antiacid = nil
 local antilava = nil
 _G.Glove = false
@@ -22,12 +21,10 @@ _G.SpeedValue = 0
 _G.JumpPower = false
 _G.Health = false
 _G.SlapAura = false
-_G.AutoSlap = false
 _G.AutoWin = false
 _G.AntiAcid = false
 _G.AntiLava = false
 _G.AntiKnockback = false
-
 local speeddistance = 3
 local boostcooldown = 2.5
 local tomahawkRange = 20
@@ -43,7 +40,6 @@ end)
 
 --[[ Configuration System ]]
 local ConfigFileName = "AWEHub_SlapRoyale_Config.json"
-
 local ConfigData = {
 	StaffDetection = false,
 	WalkSpeed = false,
@@ -59,8 +55,6 @@ local ConfigData = {
 	Hitbox = false,
 	HitboxSize = 5,
 	SlapAura = false,
-	FastSlapAura = false,
-	AutoSlap = false,
 	TomahawkAura = false,
 	TomahawkRange = 20,
 	TomahawkAimbot = false,
@@ -149,10 +143,7 @@ local Combat = {
 	HitboxSize = 10,
 	SlapAuraEnabled = ConfigData.SlapAura,
 	SlapAuraThread = nil,
-	AutoSlapEnabled = ConfigData.AutoSlap,
-	AutoSlapThread = nil,
-	SlapAuraRange = 14, -- Updated to match source slap aura range
-	SlapAuraInterval = 0.05,
+	SlapAuraRange = 14,
 	SlapRemote = nil,
 }
 
@@ -178,7 +169,6 @@ local function GetValidSlapTarget(p1)
 end
 
 local slapCooldowns = {}
-
 function Combat.StartSlapAura()
 	if Combat.SlapAuraThread then
 		return
@@ -191,15 +181,13 @@ function Combat.StartSlapAura()
 			if slap and character3 and character3:FindFirstChild("HumanoidRootPart") then
 				local position3 = character3.HumanoidRootPart.Position
 				local currentTime = tick()
-
 				for _, value4 in ipairs(Players:GetPlayers()) do
 					if value4 ~= player and value4.Character then
 						local humanoidRootPart2 = value4.Character:FindFirstChild("HumanoidRootPart")
 						local v17 = GetValidSlapTarget(value4.Character)
-
 						if humanoidRootPart2 and v17
 							and (humanoidRootPart2.Position - position3).Magnitude <= Combat.SlapAuraRange then
-							if not slapCooldowns[value4] or currentTime - slapCooldowns[value4] >= 0.25 then
+							if not slapCooldowns[value4] or currentTime - slapCooldowns[value4] >= 2.5 then
 								slapCooldowns[value4] = currentTime
 								pcall(function()
 									slap:FireServer(v17)
@@ -209,8 +197,7 @@ function Combat.StartSlapAura()
 					end
 				end
 			end
-			local interval = ConfigData.FastSlapAura and 0.02 or 0.05
-			task.wait(interval)
+			task.wait(0.05)
 		end
 		Combat.SlapAuraThread = nil
 	end)
@@ -222,47 +209,6 @@ function Combat.SetSlapAura(state)
 	SaveConfig()
 	if Combat.SlapAuraEnabled then
 		Combat.StartSlapAura()
-	end
-end
-
-function Combat.StartAutoSlap()
-	if Combat.AutoSlapThread then
-		return
-	end
-	Combat.AutoSlapThread = task.spawn(function()
-		local slap = Combat.GetSlapRemote()
-		while Combat.AutoSlapEnabled do
-			slap = Combat.GetSlapRemote()
-			local character3 = player.Character
-			if slap and character3 and character3:FindFirstChild("HumanoidRootPart") then
-				local position3 = character3.HumanoidRootPart.Position
-				for _, value4 in ipairs(Players:GetPlayers()) do
-					if value4 ~= player and value4.Character then
-						local humanoidRootPart2 = value4.Character:FindFirstChild("HumanoidRootPart")
-						local v17 = GetValidSlapTarget(value4.Character)
-
-						if humanoidRootPart2 and v17
-							and (humanoidRootPart2.Position - position3).Magnitude <= Combat.SlapAuraRange then
-							pcall(function()
-								slap:FireServer(v17)
-							end)
-						end
-					end
-				end
-			end
-			task.wait(0.05)
-		end
-		Combat.AutoSlapThread = nil
-	end)
-end
-
-function Combat.SetAutoSlap(state)
-	Combat.AutoSlapEnabled = state == true
-	ConfigData.AutoSlap = state == true
-	_G.AutoSlap = state == true
-	SaveConfig()
-	if Combat.AutoSlapEnabled then
-		Combat.StartAutoSlap()
 	end
 end
 
@@ -426,6 +372,7 @@ local FPSStarted = os.clock()
 RunService.RenderStepped:Connect(function()
 	Frames += 1
 end)
+
 task.spawn(function()
 	while task.wait(1) do
 		local Now = os.clock()
@@ -488,6 +435,7 @@ ConfigTab:Button({
 		Notification("Config", "Configuration saved successfully!", 3, "bird")
 	end
 })
+
 ConfigTab:Button({
 	Title = "Reload Configuration",
 	Desc = "Reloads configuration from file",
@@ -521,7 +469,6 @@ Game:Toggle({
 })
 
 Game:Divider()
-
 Game:Button({
 	Title = "Get Bunker Code",
 	Desc = "Shows a notification with bunker code",
@@ -651,7 +598,6 @@ Game:Button({
 })
 
 Game:Divider()
-
 Game:Button({
 	Title = "TP to Acid",
 	Desc = "Teleports to the acid area",
@@ -685,7 +631,6 @@ Game:Button({
 })
 
 Game:Divider()
-
 Game:Button({
 	Title = "Rejoin Matchmaking",
 	Desc = "Teleports you to a matchmaking server",
@@ -697,7 +642,6 @@ Game:Button({
 
 -- Walkspeed Logic
 local speedConnection = nil
-
 PlayerMods:Toggle({
 	Title = "Movement Speed",
 	Desc = "Increases your speed using velocity logic",
@@ -774,7 +718,6 @@ if ConfigData.WalkSpeed then
 end
 
 PlayerMods:Divider()
-
 PlayerMods:Toggle({
 	Title = "Speed Boost",
 	Desc = "Toggle a TP-Based speed boost",
@@ -818,7 +761,6 @@ PlayerMods:Slider({
 })
 
 PlayerMods:Divider()
-
 PlayerMods:Toggle({
 	Title = "Speed Boost (Bypass)",
 	Desc = "Moves your character smoothly using movement direction vector bypass",
@@ -849,9 +791,7 @@ task.spawn(function()
 end)
 
 PlayerMods:Divider()
-
 local originalC0 = nil
-
 PlayerMods:Toggle({
 	Title = "Fast Speed",
 	Desc = "Fast animation-based movement exploit",
@@ -936,7 +876,6 @@ PlayerMods:Toggle({
 })
 
 PlayerMods:Divider()
-
 local OriginalTexts = {}
 local TextConnections = {}
 local ScanLoopRunning = false
@@ -1092,7 +1031,6 @@ CombatTab:Toggle({
 })
 
 CombatTab:Divider()
-
 local TPPlayerDropdown = CombatTab:Dropdown({
 	Title = "Select Player to TP",
 	Desc = "Choose a player to teleport to safely",
@@ -1130,7 +1068,6 @@ CombatTab:Button({
 })
 
 CombatTab:Divider()
-
 CombatTab:Toggle({
 	Title = "Hitbox",
 	Desc = "extends players hitbox to make your hits alot easier",
@@ -1181,7 +1118,6 @@ CombatTab:Slider({
 })
 
 CombatTab:Divider()
-
 CombatTab:Toggle({
 	Title = "Slap Aura",
 	Desc = "Automatically slaps players within range (Only works when holding a glove)",
@@ -1190,29 +1126,6 @@ CombatTab:Toggle({
 	Value = ConfigData.SlapAura,
 	Callback = function(Value)
 		Combat.SetSlapAura(Value)
-	end
-})
-
-CombatTab:Toggle({
-	Title = "Fast Slap Aura",
-	Desc = "speeds up slap aura a bunch",
-	Icon = "bird",
-	Type = "Checkbox",
-	Value = ConfigData.FastSlapAura,
-	Callback = function(Value)
-		ConfigData.FastSlapAura = Value
-		SaveConfig()
-	end
-})
-
-CombatTab:Toggle({
-	Title = "Auto Slap",
-	Desc = "Automatically slaps players in range (Independent toggle)",
-	Icon = "bird",
-	Type = "Checkbox",
-	Value = ConfigData.AutoSlap,
-	Callback = function(Value)
-		Combat.SetAutoSlap(Value)
 	end
 })
 
@@ -1248,7 +1161,6 @@ CombatTab:Toggle({
 })
 
 CombatTab:Divider()
-
 CombatTab:Toggle({
 	Title = "Tomahawk Aura",
 	Desc = "Hits players within a set distance.",
@@ -1552,7 +1464,6 @@ local function StartFly(speed)
 	FlyActive = true
 	ConfigData.Fly = true
 	SaveConfig()
-
 	FlyConnection = RunService.Heartbeat:Connect(function()
 		if not FlyActive then return end
 		local char = player.Character
@@ -1569,12 +1480,10 @@ local function StartFly(speed)
 		if FlyKeys.D then moveVector += Vector3.new(1, 0, 0) end
 		if FlyKeys.Q or MobileFlyDown then moveVector += Vector3.new(0, -1, 0) end
 		if FlyKeys.E or MobileFlyUp then moveVector += Vector3.new(0, 1, 0) end
-
 		local lookV = Vector3.new(camCFrame.LookVector.X, 0, camCFrame.LookVector.Z).Unit
 		local rightV = Vector3.new(camCFrame.RightVector.X, 0, camCFrame.RightVector.Z).Unit
 		local dir = (lookV * -moveVector.Z + rightV * moveVector.X + Vector3.new(0, moveVector.Y, 0))
 		if dir.Magnitude > 0 then dir = dir.Unit end
-
 		local hrp = character and character:FindFirstChild("HumanoidRootPart")
 		if hrp then
 			local targetVel = dir * FlySpeed
@@ -1682,7 +1591,6 @@ ObtainmentTab:Button({
 					end
 				end
 			end)
-
 			WindUI:Notify({Title = "Getting Chain...", Content = "Please wait...", Duration = 2, Icon = "triangle-exclamation"})
 			
 			local originOffice = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("OriginOffice")
@@ -1790,8 +1698,8 @@ ESP:Toggle({
 ESP:Divider()
 
 local itemValues = {
-	"Apple", "Bandage", "Bomb", "Bull's Essence", "Frog Potion", "Boba", "Speed Potion",
-	"True Power", "Tomahawk", "Force Field Crystal", "Sphere of Fury", "Medkit",
+	"Apple", "Bandage", "Bomb", "Bull's Essence", "Frog Potion", "Boba", "Speed Potion", 
+	"True Power", "Tomahawk", "Force Field Crystal", "Sphere of Fury", "Medkit", 
 	"Lightning Potion", "Healing Potion", "Strength Potion", "Cube of Ice", "Witch Brew"
 }
 
@@ -1844,7 +1752,6 @@ Game:Toggle({
 })
 
 local AutoBombBusEnabled = false
-
 Game:Toggle({
 	Title = "Auto Bomb Bus",
 	Desc = "Automatically activates bomb after exiting bus",
