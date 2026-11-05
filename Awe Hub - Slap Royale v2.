@@ -187,7 +187,7 @@ function Combat.StartSlapAura()
 						local v17 = GetValidSlapTarget(value4.Character)
 						if humanoidRootPart2 and v17
 							and (humanoidRootPart2.Position - position3).Magnitude <= Combat.SlapAuraRange then
-							if not slapCooldowns[value4] or currentTime - slapCooldowns[value4] >= 2.5 then
+							if not slapCooldowns[value4] or currentTime - slapCooldowns[value4] >= 2.3 then
 								slapCooldowns[value4] = currentTime
 								pcall(function()
 									slap:FireServer(v17)
