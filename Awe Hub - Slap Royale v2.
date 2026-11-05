@@ -187,7 +187,7 @@ function Combat.StartSlapAura()
 						local v17 = GetValidSlapTarget(value4.Character)
 						if humanoidRootPart2 and v17
 							and (humanoidRootPart2.Position - position3).Magnitude <= Combat.SlapAuraRange then
-							if not slapCooldowns[value4] or currentTime - slapCooldowns[value4] >= 2.3 then
+							if not slapCooldowns[value4] or currentTime - slapCooldowns[value4] >= 2.4 then
 								slapCooldowns[value4] = currentTime
 								pcall(function()
 									slap:FireServer(v17)
@@ -850,7 +850,7 @@ PlayerMods:Toggle({
 UserInputService.JumpRequest:Connect(function()
 	if ConfigData.InfiniteJump then
 		local char = player.Character
-		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		local hum = char and char:FindFirstChild("Humanoid")
 		if hum then
 			hum:ChangeState(Enum.HumanoidStateType.Jumping)
 		end
